@@ -1,7 +1,7 @@
 package com.premiumminds.internship.taskscheduler;
 
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Set;
 
 public class Task {
 
@@ -18,8 +18,7 @@ public class Task {
     }
 
     /**
-     * Este contrutor recebe uma task e faz o deepcopy dela.
-     * É útil fazer isto para não alterar o estado original de uma task.
+     * This constructor receives a task and creates a deep copy of it.
      */
     public Task(Task original) {
         this.id = original.id;

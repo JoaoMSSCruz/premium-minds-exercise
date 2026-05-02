@@ -1,24 +1,25 @@
 package com.premiumminds.internship.taskscheduler;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 public class TaskSchedulerService implements ITaskSchedulerService {
 
     /**
-     * Este método tem complexidade temporal de O(n^2) e espacial de O(n).
+     * This method has a time complexity of O(n^2) and a space complexity of O(n).
      */
     @Override
     public List<Task> getEligibleTasks(Collection<Task> tasks) {
         List<Task> eligibleTasks = new ArrayList<>();
 
-        /** 
-         * Para otimizar a complexidade temporal e evitar O(n), todas as tarefas estão mapeadas pelo seu ID. 
-         * Assim, qualquer pesquisa por dependências é feita em O(1).
+        /* 
+         * To optimize time complexity and avoid O(n), all tasks are mapped by their ID.
+         * Thus, any dependency lookup is done in O(1).
          */
         Map<String, Task> taskById = new HashMap<>();
         for (Task task : tasks) {
@@ -26,28 +27,21 @@ public class TaskSchedulerService implements ITaskSchedulerService {
         }            
  
         for (Task task : tasks) {
-            if (task.getStatus() == TaskStatus.COMPLETED) {
+            if (task.getStatus() != TaskStatus.PENDING) {
                 continue;
             }
 
-            boolean eligible = true; // Até ser provado o contrário a task é elegível
+            boolean eligible = true; 
 
             Set<String> taskDependencies = task.getDependencies();
 
-            // Se a task não tiver dependências então é elegível
             if (taskDependencies.isEmpty()) { 
                 eligibleTasks.add(task);
             } else {
                 for (String dependecyId : taskDependencies) {
                     Task dependencyTask = taskById.get(dependecyId);
 
-                    // Se uma dependência não existir, a task é inválida
-                    if (dependencyTask == null) { 
-                        throw new IllegalArgumentException("A dependência " + dependecyId + " não existe!");
-                    }
-
-                    // Se uma dependência não estiver completada, então a task é automaticamente elegível
-                    if (dependencyTask.getStatus() != TaskStatus.COMPLETED) {
+                    if (dependencyTask == null || dependencyTask.getStatus() != TaskStatus.COMPLETED) {
                         eligible = false;
                         break;
                     }
@@ -57,21 +51,25 @@ public class TaskSchedulerService implements ITaskSchedulerService {
                 }
             }
         }
+
+        // Orders the tasks by priority
+        eligibleTasks.sort(Comparator.comparingInt(Task::getPriority));
+
         return eligibleTasks;
     }
 
     /**
-     * Este método tem complexidade temporal de O(n^3) e espacial de O(n).
+     * This method has a time complexity of O(n^3) and a space complexity of O(n).
      */
     @Override
     public List<Task> getExecutionOrder(Collection<Task> tasks) {
         List<Task> executionOrder = new ArrayList<>();
 
-        /** 
-         * Para otimizar a complexidade temporal e evitar O(n), todas as tarefas estão mapeadas pelo seu ID. 
-         * Assim, qualquer pesquisa por dependências é feita em O(1).
+        /* 
+         * To optimize time complexity and avoid O(n), all tasks are mapped by their ID.
+         * Thus, any dependency lookup is done in O(1).
          * 
-         * Para além disso, para não alterar o estado original das tasks, é criada uma nova lista de tasks com deep copy.
+         * Furthermore, to avoid altering the original state of the tasks, a new list of tasks is created with a deep copy.
          */
         Map<String, Task> taskById = new HashMap<>();
         List<Task> deepCoppiedTasks = new ArrayList<>();
@@ -81,6 +79,14 @@ public class TaskSchedulerService implements ITaskSchedulerService {
             deepCoppiedTasks.add(deepCoppiedTask);
         } 
 
+        // Detect missing dependencies
+        for (Task task : tasks) {
+            for (String dependencyID : task.getDependencies()) {
+                if (!taskById.containsKey(dependencyID)) {
+                    throw new IllegalArgumentException("The dependency " + dependencyID + " doesn't exist.");
+                }
+            }
+        }
 
         while (executionOrder.size() != tasks.size()) {
             List<Task> eligibleTasks = this.getEligibleTasks(deepCoppiedTasks);
@@ -89,27 +95,12 @@ public class TaskSchedulerService implements ITaskSchedulerService {
                 throw new IllegalArgumentException("Circular dependency detected.");
             }
 
-            Task highestPriorityTask = this.getHighestPriorityTask(eligibleTasks);
+            Task highestPriorityTask = eligibleTasks.get(0);
 
             executionOrder.add(taskById.get(highestPriorityTask.getId()));
 
             highestPriorityTask.setStatus(TaskStatus.COMPLETED);
         }
         return executionOrder;
-    }
-
-    /**
-     * Este método tem complexidade temporal de O(n) e espacial de O(1). 
-     */
-    private Task getHighestPriorityTask(List<Task> tasks) {
-        Task highestPriorityTask = tasks.get(0);;
-
-        for (Task task : tasks) {
-            if (task.getPriority() < highestPriorityTask.getPriority()) {
-                highestPriorityTask = task;
-            }
-        }
-
-        return highestPriorityTask;
     }
 }
