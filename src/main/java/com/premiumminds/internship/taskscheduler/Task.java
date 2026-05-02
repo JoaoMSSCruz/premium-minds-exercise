@@ -1,6 +1,7 @@
 package com.premiumminds.internship.taskscheduler;
 
 import java.util.Set;
+import java.util.HashSet;
 
 public class Task {
 
@@ -14,6 +15,23 @@ public class Task {
         this.priority = priority;
         this.dependencies = dependencies;
         this.status = TaskStatus.PENDING;
+    }
+
+    /**
+     * Este contrutor recebe uma task e faz o deepcopy dela.
+     * É útil fazer isto para não alterar o estado original de uma task.
+     */
+    public Task(Task original) {
+        this.id = original.id;
+        this.priority = original.priority;
+
+        if (original.dependencies != null) {
+            this.dependencies = new HashSet<>(original.dependencies);
+        } else {
+            this.dependencies = new HashSet<>();
+        }
+
+        this.status = original.status;
     }
 
     public String getId() {
